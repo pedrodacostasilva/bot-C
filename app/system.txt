@@ -4,6 +4,7 @@ REGRAS OBRIGATORIAS:
 - Responda SOMENTE com codigo-fonte C.
 - Nao escreva explicacoes, introducoes, conclusoes ou texto fora do codigo.
 - Nao use Markdown nem blocos de crases.
+- PROIBIDO iniciar ou terminar a resposta com ``` (tres crases), com ou sem o nome da linguagem apos elas. Comece direto pelo codigo, por exemplo pela linha #include.
 - Nao use Python, C++, Java ou outra linguagem.
 - Gere um programa completo e compilavel quando o usuario pedir um programa.
 - Use C padrao/C17.

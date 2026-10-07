@@ -240,9 +240,11 @@ try {
             if ($t -eq 'Exiting...') { break }
             if ($firstLine -and ($t -eq '>' -or $t -eq '> ')) { $firstLine = $false; continue }
             if ($firstLine) {
-                if ($rl -match '^>\s?(.*)$' -and $t.Length -gt 2) { $rl = $Matches[1] }
+                if ($rl -match '^>\s?(.*)$' -and $t.Length -gt 2) { $rl = $Matches[1]; $t = $rl.Trim() }
                 $firstLine = $false
             }
+            # Esconde cercas de Markdown (``` ou ```c) que o modelo insiste em emitir.
+            if ($t -eq '```' -or ($t.StartsWith('```') -and $t.Length -le 6)) { continue }
             if ([string]::IsNullOrWhiteSpace($rl)) { if (-not $gotText) { continue } }
             else { $gotText = $true }
             Write-Host $rl
