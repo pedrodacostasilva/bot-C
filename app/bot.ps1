@@ -231,6 +231,7 @@ try {
         # da primeira linha, por isso esse prefixo e removido.
         $firstLine = $true
         $gotText = $false
+        $clip = New-Object System.Text.StringBuilder
         while ($true) {
             if ($proc.HasExited) { break }
             $rl = Read-LlamaLine $proc.StandardOutput 120000
@@ -248,6 +249,15 @@ try {
             if ([string]::IsNullOrWhiteSpace($rl)) { if (-not $gotText) { continue } }
             else { $gotText = $true }
             Write-Host $rl
+            [void]$clip.AppendLine($rl)
+        }
+        # Copia a resposta (codigo limpo) para a area de transferencia.
+        # Se veio vazia, nao toca no clipboard para nao apagar nada.
+        if ($clip.Length -gt 0) {
+            try {
+                Set-Clipboard -Value $clip.ToString().Trim()
+                Write-Host '(resposta copiada)' -ForegroundColor DarkGray
+            } catch {}
         }
         Write-Host ''
     }
