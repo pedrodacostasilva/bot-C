@@ -19,20 +19,6 @@ if (Test-Path -LiteralPath $VC) {
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host '============================================' -ForegroundColor Cyan
-Write-Host '              C-BOT 0.5B V8' -ForegroundColor Cyan
-Write-Host '============================================' -ForegroundColor Cyan
-Write-Host 'IA local | somente C | sem servidor | sem RAG'
-Write-Host 'Modelo: Qwen2.5-Coder-0.5B Q2_K'
-Write-Host 'Limite: 500 tokens'
-Write-Host 'Modelo fica carregado durante a sessao'
-Write-Host ''
-Write-Host 'ENTER envia | SHIFT+ENTER quebra linha | colar multi-linha funciona' -ForegroundColor DarkGray
-Write-Host "Digite 'sair' para encerrar." -ForegroundColor DarkGray
-Write-Host ''
-Write-Host 'Carregando modelo...' -ForegroundColor DarkGray
-Write-Host ''
-
 # Esta build b11386 funciona de forma confiavel no modo de terminal nativo.
 $cliArgs = @(
     '-m', $Model,
@@ -82,6 +68,8 @@ $psi.FileName = $Cli
 $psi.Arguments = (($cliArgs | ForEach-Object { Quote-Arg $_ }) -join ' ')
 $psi.UseShellExecute = $false
 $psi.RedirectStandardInput = $true
+$psi.RedirectStandardOutput = $true
+$psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
 $psi.CreateNoWindow = $false
 
 try {
@@ -95,8 +83,49 @@ try {
 $stdin = $proc.StandardInput
 $stdin.AutoFlush = $true
 
+function Read-LlamaLine($reader, [int]$timeoutMs) {
+    try {
+        $task = $reader.ReadLineAsync()
+        if ($task.Wait($timeoutMs)) { return $task.Result }
+        return $null
+    } catch { return $null }
+}
+
+# Animacao de carregamento (sem texto) ate o modelo estar pronto.
+# Descarta o banner inicial do llama-cli (logo, build, comandos).
+# O prompt final ">" vem sem quebra de linha, por isso paramos
+# apos alguns segundos de silencio depois de ver o banner.
+$frames = @('|', '/', '-', '\')
+$fi = 0
+try { [Console]::CursorVisible = $false } catch {}
+$seenBanner = $false
+$silence = 0
+while ($true) {
+    if ($proc.HasExited) { break }
+    try {
+        [Console]::Write("`r" + $frames[$fi])
+        $fi = ($fi + 1) % $frames.Count
+    } catch {}
+    $bl = Read-LlamaLine $proc.StandardOutput 250
+    if ($bl -eq $null) {
+        if ($seenBanner) { $silence++; if ($silence -ge 20) { break } }
+        continue
+    }
+    $silence = 0
+    $bt = $bl.Trim()
+    if ($bt -match 'build|model|available commands') { $seenBanner = $true }
+    if ($bt -eq '>' -or $bt -eq '> ') { break }
+}
+try {
+    [Console]::Write("`r ")
+    [Console]::Write("`r")
+    [Console]::CursorVisible = $true
+} catch {}
+Write-Host ''
+
 try {
     while (-not $proc.HasExited) {
+        Write-Host '> ' -NoNewline
         $sb = New-Object System.Text.StringBuilder
         $cancelled = $false
 
@@ -196,6 +225,29 @@ try {
             Write-Host 'llama-cli encerrou a entrada.' -ForegroundColor Red
             break
         }
+
+        # Le e exibe a resposta ate a linha de estatisticas (que e escondida).
+        # O ">" do llama-cli vem sem quebra de linha e gruda no inicio
+        # da primeira linha, por isso esse prefixo e removido.
+        $firstLine = $true
+        $gotText = $false
+        while ($true) {
+            if ($proc.HasExited) { break }
+            $rl = Read-LlamaLine $proc.StandardOutput 120000
+            if ($rl -eq $null) { if ($proc.HasExited) { break } else { continue } }
+            $t = $rl.Trim()
+            if ($t -match '^\[.*Prompt:.*\]$') { break }
+            if ($t -eq 'Exiting...') { break }
+            if ($firstLine -and ($t -eq '>' -or $t -eq '> ')) { $firstLine = $false; continue }
+            if ($firstLine) {
+                if ($rl -match '^>\s?(.*)$' -and $t.Length -gt 2) { $rl = $Matches[1] }
+                $firstLine = $false
+            }
+            if ([string]::IsNullOrWhiteSpace($rl)) { if (-not $gotText) { continue } }
+            else { $gotText = $true }
+            Write-Host $rl
+        }
+        Write-Host ''
     }
 
     try { if (-not $proc.HasExited) { $proc.WaitForExit() } } catch {}
