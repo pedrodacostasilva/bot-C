@@ -22,10 +22,10 @@ if (Test-Path -LiteralPath $VC) {
 # Esta build b11386 funciona de forma confiavel no modo de terminal nativo.
 $cliArgs = @(
     '-m', $Model,
-    '-c', '4096',
+    '-c', '2048',
     '-n', '1500',
-    '-t', '4',
-    '-tb', '4',
+    '-t', '2',
+    '-tb', '2',
     '--temp', '0',
     '--no-warmup',
     '--simple-io',
@@ -71,6 +71,17 @@ $psi.RedirectStandardInput = $true
 $psi.RedirectStandardOutput = $true
 $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
 $psi.CreateNoWindow = $false
+
+try {
+    $mem = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $freeGB = $mem.FreePhysicalMemory / 1MB
+    if ($freeGB -lt 2.5) {
+        Write-Host ''
+        Write-Host ('Pouca memoria livre ({0:N1} GB). Feche o navegador/outros programas e rode de novo.' -f $freeGB) -ForegroundColor Yellow
+        Write-Host 'Se continuar, o modelo pode falhar ao carregar.' -ForegroundColor Yellow
+        Write-Host ''
+    }
+} catch {}
 
 try {
     $proc = [System.Diagnostics.Process]::Start($psi)
@@ -267,6 +278,7 @@ try {
     if ($exitCode -ne 0) {
         Write-Host ''
         Write-Host "llama-cli terminou com codigo $exitCode." -ForegroundColor Red
+        Write-Host 'Se o erro for de memoria (failed to allocate), feche programas e rode de novo.' -ForegroundColor Yellow
         exit $exitCode
     }
 }
