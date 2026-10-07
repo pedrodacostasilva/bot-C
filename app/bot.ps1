@@ -23,7 +23,7 @@ if (Test-Path -LiteralPath $VC) {
 $cliArgs = @(
     '-m', $Model,
     '-c', '4096',
-    '-n', '500',
+    '-n', '1500',
     '-t', '4',
     '-tb', '4',
     '--temp', '0',
