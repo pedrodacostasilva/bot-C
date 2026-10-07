@@ -1,0 +1,9 @@
+# Binários grandes — recuperados/baixados pelo INSTALAR.ps1, não versionar
+model/
+runtime/
+*.gguf
+*.zip
+
+# Temporários Windows
+Thumbs.db
+Desktop.ini
