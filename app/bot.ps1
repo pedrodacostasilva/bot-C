@@ -22,10 +22,10 @@ if (Test-Path -LiteralPath $VC) {
 # Esta build b11386 funciona de forma confiavel no modo de terminal nativo.
 $cliArgs = @(
     '-m', $Model,
-    '-c', '2048',
+    '-c', '4096',
     '-n', '1500',
-    '-t', '2',
-    '-tb', '2',
+    '-t', '4',
+    '-tb', '4',
     '--temp', '0',
     '--no-warmup',
     '--simple-io',
