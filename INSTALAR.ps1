@@ -11,7 +11,7 @@ $TempZip = Join-Path $Root 'runtime\llama-runtime.zip'
 
 New-Item -ItemType Directory -Force -Path (Split-Path $ModelDest), $LlamaDir, $VcDir | Out-Null
 
-# 1) Modelo: reaproveita automaticamente o arquivo ja baixado no Downloads.
+# 1) Modelo: reaproveita o arquivo ja baixado em Downloads, ou baixa sozinho do HuggingFace.
 if (-not (Test-Path $ModelDest)) {
     Write-Host 'Procurando modelo ja baixado...'
     $found = Get-ChildItem -Path $Downloads -Filter $ModelName -File -Recurse -ErrorAction SilentlyContinue |
@@ -22,7 +22,16 @@ if (-not (Test-Path $ModelDest)) {
         Write-Host "Reutilizando: $($found.FullName)"
         Copy-Item $found.FullName $ModelDest -Force
     } else {
-        throw 'Modelo nao encontrado em Downloads. Copie o GGUF para model\model.gguf e rode novamente.'
+        Write-Host ''
+        Write-Host 'Modelo nao encontrado em Downloads.'
+        Write-Host 'Baixando modelo automaticamente do HuggingFace...'
+        Write-Host $ModelUrl
+        & curl.exe -L --fail --retry 3 --retry-delay 5 --connect-timeout 20 -o $ModelDest $ModelUrl
+        if ($LASTEXITCODE -ne 0) {
+            if (Test-Path $ModelDest) { Remove-Item $ModelDest -Force -ErrorAction SilentlyContinue }
+            throw "Falha ao baixar o modelo. Codigo curl: $LASTEXITCODE"
+        }
+        Write-Host 'Modelo baixado com sucesso.'
     }
 }
 
