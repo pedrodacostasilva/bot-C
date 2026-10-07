@@ -20,12 +20,23 @@ if (Test-Path -LiteralPath $VC) {
 [Console]::InputEncoding = [System.Text.Encoding]::UTF8
 
 # Esta build b11386 funciona de forma confiavel no modo de terminal nativo.
+# Fallback automatico de memoria: com pouca RAM livre usa parametros
+# leves (resposta mais lenta em vez de falha ao carregar). Silencioso.
+$Ctx = '4096'
+$Thr = '4'
+try {
+    $mem = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    if (($mem.FreePhysicalMemory / 1MB) -lt 2.5) {
+        $Ctx = '2048'
+        $Thr = '2'
+    }
+} catch {}
 $cliArgs = @(
     '-m', $Model,
-    '-c', '4096',
+    '-c', $Ctx,
     '-n', '1500',
-    '-t', '4',
-    '-tb', '4',
+    '-t', $Thr,
+    '-tb', $Thr,
     '--temp', '0',
     '--no-warmup',
     '--simple-io',
@@ -71,17 +82,6 @@ $psi.RedirectStandardInput = $true
 $psi.RedirectStandardOutput = $true
 $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
 $psi.CreateNoWindow = $false
-
-try {
-    $mem = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
-    $freeGB = $mem.FreePhysicalMemory / 1MB
-    if ($freeGB -lt 2.5) {
-        Write-Host ''
-        Write-Host ('Pouca memoria livre ({0:N1} GB). Feche o navegador/outros programas e rode de novo.' -f $freeGB) -ForegroundColor Yellow
-        Write-Host 'Se continuar, o modelo pode falhar ao carregar.' -ForegroundColor Yellow
-        Write-Host ''
-    }
-} catch {}
 
 try {
     $proc = [System.Diagnostics.Process]::Start($psi)
